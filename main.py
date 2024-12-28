@@ -3,10 +3,20 @@ from dbfread import DBF
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse, JSONResponse
-
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 app.title = "MAASoft - API Consultas de Prestamos !!!"
+
+# Configuración de CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Permitir cualquier origen (puedes restringir esto según el dominio)
+    allow_credentials=True,
+    allow_methods=["*"],  # Permitir todos los métodos HTTP
+    allow_headers=["*"],  # Permitir todos los encabezados
+)
+
 
 # Funcion para consultar un Socio por su CUIT
 def get_socio_by_cuit(cuit):
