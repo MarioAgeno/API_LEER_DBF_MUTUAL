@@ -1,0 +1,4 @@
+DBF_PATH=D:/CLIENTES/mtl/DATA
+
+# para pruebas remotas
+DBF_PATH_REMOTO=//26.208.147.39/maas/sistema/DATA
