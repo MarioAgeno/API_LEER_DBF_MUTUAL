@@ -1,18 +1,23 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from dbfread import DBF
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from pydantic import BaseModel
+from typing import List
 import os
+
 
 # Cargar variables del archivo .env
 load_dotenv()
 DBF_PATH = os.getenv("DBF_PATH")
 
-app = FastAPI()
-app.title = "MAASoft - API Consultas de Prestamos !!!"
+#app = FastAPI()
+# Opciones para deshabilitar la documentación automática
+app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+app.title = "MAASoft - API Consultas de Socios !!!"
 
 # Configuración de CORS
 app.add_middleware(
@@ -239,6 +244,54 @@ def get_movimientos_cuentas_historicos(cuenta, tipo):
                 continue
     return resumen
 
+# funcion para OnBoarding de socios Banco BICA
+# Modelo de entrada
+class CuentaRequest(BaseModel):
+    CUIT: str
+
+# Modelo de salida
+class CuentaMutual(BaseModel):
+    TipoCuenta: str
+    NumeroCuenta: int
+
+class CuentaResponse(BaseModel):
+    Existe: bool
+    Convenio: int
+    CuentasMutual: List[CuentaMutual]
+
+# Función para buscar cuentas por CUIT
+def buscar_cuentas_por_cuit(cuit: str) -> CuentaResponse:
+    cuentas_dbf = DBF(os.path.join(DBF_PATH, 'Socios.dbf'), load=True)
+
+    cuentas_encontradas = []
+    convenio = os.getenv("BICA_CONVENIO", "0")
+    tipo_cuenta = os.getenv("BICA_TIPO_CUENTA", "CA") 
+
+    for cuenta in cuentas_dbf:
+        if str(cuenta['CUIT']).strip() == str(cuit).strip():
+            cuentas_encontradas.append(CuentaMutual(
+                TipoCuenta=tipo_cuenta,
+                NumeroCuenta=int(cuenta['SUCURSAL']) * 1_000_000 + int(cuenta['CODIGO'])
+            ))
+            convenio = convenio
+
+    if cuentas_encontradas:
+        return CuentaResponse(Existe=True, Convenio=convenio, CuentasMutual=cuentas_encontradas)
+    else:
+        return CuentaResponse(Existe=False, Convenio=0, CuentasMutual=[])
+
+
+@app.post("/cuentamutual", response_model=CuentaResponse)
+def obtener_info_cuenta(request: CuentaRequest, auth_key: str = Header(...)):
+    expected_key = os.getenv("BICA_AUTH_KEY", "")
+    if auth_key != expected_key:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    return buscar_cuentas_por_cuit(request.CUIT)
+
+# Fin Consulta BICA
+
+
+# Endpoints para la API de Socios y Prestamos
 @app.get("/socio/{cuit}")
 def obtener_socio(cuit: int):
     socio = get_socio_by_cuit(cuit)
