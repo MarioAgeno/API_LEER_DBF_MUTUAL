@@ -38,17 +38,6 @@ Opción B: Token JWT (opcional)
 - Devuelve un JWT válido por 1 hora
 - Usar en Authorization: Bearer <token> en llamadas posteriores
 
-Me encantaría ayudarte con eso, Mario, pero no tengo acceso directo para subir archivos o modificar repositorios en GitHub. Sin embargo, te dejo el contenido listo para que lo copies y pegues en tu archivo  dentro del repositorio :
-
-📄 README.md
-
-
-⚙️ Configuración
-Crear un archivo  en la raíz del proyecto con los siguientes valores:
-
-
-🧪 Ejecución local
-
 
 🔐 Seguridad
 Opción A: Header fijo
@@ -59,15 +48,6 @@ Opción B: Token JWT (opcional)
 • 	Parámetros: , , 
 • 	Devuelve un JWT válido por 1 hora
 • 	Usar en  en llamadas posteriores
-
-📡 Despliegue como servicio en Windows (NSSM)
-1. 	Instalar NSSM desde https://nssm.cc/download
-2. 	Crear servicio:
-
-• 	Path: 
-• 	Startup directory: 
-• 	Arguments: 
-3. 	Iniciar servicio:
 
 
 📥 Ejemplo de request
@@ -85,12 +65,7 @@ Respuesta (si existe)
   ]
 }
 
-📁 Estructura del proyecto
-API_LEER_DBF_MUTUAL/
-├── main.py
-├── bica_api.py
-├── .env
-├── README.md
+
 
 🧠 Autor
 Mario Ageno
