@@ -6,10 +6,13 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
+import uvicorn
 
 # Cargar variables del archivo .env
 load_dotenv()
 DBF_PATH = os.getenv("DBF_PATH")
+APP_HOST = os.getenv("APP_HOST", "0.0.0.0")
+APP_PORT = int(os.getenv("APP_PORT", "8000"))
 
 app = FastAPI()
 app.title = "MAASoft - API Consultas de Prestamos !!!"
@@ -319,11 +322,8 @@ async def get_custom_openapi():
 async def mensage():
     return '''
     <h1><a href='http://www.maasoft.com.ar'>MAASoft WEB</a></h1>
-    <a href='http://localhost:8000/docs'>Documentacion</a>
+    <a href='/docs'>Documentacion</a>
     '''
 
-# -- Para Ejecutar desde consola solo llamando py main.py
-'''
 if __name__ == '__main__':
-    uvicorn.run(app, host='0.0.0.0', port=8000)
-'''
+    uvicorn.run(app, host=APP_HOST, port=APP_PORT)

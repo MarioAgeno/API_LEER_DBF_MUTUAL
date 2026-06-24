@@ -69,6 +69,45 @@ Documentacion:
 
 http://127.0.0.1:8000/docs
 
+## Produccion
+
+Para que la API quede accesible desde la red y no solo desde localhost, definila con variables de entorno:
+
+APP_HOST=0.0.0.0
+APP_PORT=8000
+
+Despues se accede con la IP publica o la IP del servidor, por ejemplo:
+
+http://IP_PUBLICA:8000/docs
+
+Si cambiamos el puerto, hay que abrir ese puerto en el firewall del servidor.
+
+## NSSM
+
+Si la vas a levantar como servicio con NSSM, una configuracion simple es:
+
+Programa:
+
+D:\PYTHON\API_LEER_DBF_MUTUAL\venv\Scripts\python.exe
+
+Argumentos:
+
+main.py
+
+Directorio inicial:
+
+D:\PYTHON\API_LEER_DBF_MUTUAL
+
+Variables de entorno del servicio:
+
+APP_HOST=0.0.0.0
+APP_PORT=8000
+DBF_PATH=\\servidor\ruta\a\DATA
+
+Tambien podes usar uvicorn directo desde NSSM con:
+
+main:app --host 0.0.0.0 --port 8000
+
 ## Endpoints
 
 1. GET /socio/{cuit}
