@@ -385,8 +385,6 @@ async def mensage():
     <a href='http://localhost:8000/docs'>Documentacion</a>
     '''
 
-
-
 # -- Para Ejecutar desde consola solo llamando py main.py
 '''
 if __name__ == '__main__':
