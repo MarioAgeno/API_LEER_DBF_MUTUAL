@@ -5,6 +5,8 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from dbfread import FieldParser
+from decimal import Decimal, InvalidOperation
 import os
 
 # Cargar variables del archivo .env
@@ -24,24 +26,84 @@ app.add_middleware(
 )
 
 
+class SafeFieldParser(FieldParser):
+    def parseN(self, field, data):
+        if not data:
+            return None
+        try:
+            return super().parseN(field, data)
+        except ValueError:
+            return None
+
+    def parseD(self, field, data):
+        if not data or data == b'\x00\x00\x00\x00\x00\x00\x00\x00':
+            return None
+        try:
+            return super().parseD(field, data)
+        except ValueError:
+            return None
+
+    def parseL(self, field, data):
+        if not data or data == b'\x00':
+            return None
+        try:
+            return super().parseL(field, data)
+        except ValueError:
+            return None
+
+
+def load_dbf(filename):
+    return DBF(os.path.join(DBF_PATH, filename), load=True, parserclass=SafeFieldParser)
+
+
+def normalize_id(value):
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    text = text.replace(',', '.')
+    try:
+        decimal_value = Decimal(text)
+        if decimal_value == decimal_value.to_integral_value():
+            text = str(int(decimal_value))
+        else:
+            text = format(decimal_value.normalize(), 'f').rstrip('0').rstrip('.')
+    except (InvalidOperation, ValueError):
+        pass
+    return text.lstrip('0') or '0'
+
+
+def ids_match(db_value, query_value):
+    return normalize_id(db_value) == normalize_id(query_value)
+
+
 # Funcion para consultar un Socio por su CUIT
 def get_socio_by_cuit(cuit):
-    socios = DBF(os.path.join(DBF_PATH, 'Socios.dbf'), load=True)
+    socios = load_dbf('Socios.dbf')
     for socio in socios:
-        if socio['CUIT'] == cuit:
+        if ids_match(socio['CUIT'], cuit):
             return {
                 'Codigo': socio['CODIGO'],
                 'Nombre': socio['NOMBRE'],
                 'Domicilio': socio['DOMICI'],
-                'Tipo Documento': socio['TIPODOC'],
-                'Numero': socio['NRODOC'],
-                'CUIT': socio['CUIT']
+                'Codigo Postal': socio['CODPOSTAL'],
+                'CUIT': socio['CUIT'],
+                'Fecha Nacimiento': socio['FECNAC'],
+                'Fecha Ingreso': socio['FECING'],
+                'Es PEP': socio['PEP'],
+                'Nacionalidad': socio['NACION'],
+                'Telefono': socio['TELEFO'],
+                'Telefono 2': socio['FAX'],
+                'Movil': socio['CELULAR'],
+                'e-Mail': socio['MAIL'],
+                'Codigo Actividad': socio['ACTIVIDAD']
             }
     return None
 
 # Funcion para consultar los prestamos de un Socio por su codigo
 def get_prestamos_by_socio(codigo_socio):
-    prestamos = DBF(os.path.join(DBF_PATH, 'Movae01.dbf'), load=True)
+    prestamos = load_dbf('Movae01.dbf')
     prestamos_socio = [
         {
             'Ayuda': prestamo['AYUDA'],
@@ -60,15 +122,15 @@ def get_prestamos_by_socio(codigo_socio):
             'Linea': prestamo['COMPRO'],
             'Tipo': prestamo['TIPO']
         }
-        for prestamo in prestamos if prestamo['SOCIO'] == codigo_socio
+        for prestamo in prestamos if ids_match(prestamo['SOCIO'], codigo_socio)
     ]
     return prestamos_socio
 
 # Funcion para consultar un prestamo por su numero
 def get_prestamos_by_ayuda(ayuda):
-    prestamos = DBF(os.path.join(DBF_PATH, 'Movae01.dbf'), load=True)
+    prestamos = load_dbf('Movae01.dbf')
     for prestamo in prestamos:
-        if prestamo['AYUDA'] == ayuda:
+        if ids_match(prestamo['AYUDA'], ayuda):
             return {
                 'Ayuda': prestamo['AYUDA'],
                 'fecha': prestamo['FECHA'],
@@ -90,7 +152,7 @@ def get_prestamos_by_ayuda(ayuda):
 
 # Funcion para consultar las cuotas de un prestamos por el numero
 def get_cuotas_by_ayuda(ayuda):
-    cuotas = DBF(os.path.join(DBF_PATH, 'Cuotas.dbf'), load=True)
+    cuotas = load_dbf('Cuotas.dbf')
     cuotas_ayuda = [
         {
             'Ayuda': prestamo['AYUDA'],
@@ -109,16 +171,17 @@ def get_cuotas_by_ayuda(ayuda):
             'Amortizado': prestamo['TOTAMO'],
             'Linea': prestamo['MONEDA']
         }
-        for prestamo in cuotas if prestamo['AYUDA'] == ayuda
+        for prestamo in cuotas if ids_match(prestamo['AYUDA'], ayuda)
     ]
     return cuotas_ayuda
 
 # Funcion para consultar datos del socio por el Codigo (lo uso en sistema WEB de Tarjetas)
 def get_socio_by_codigo(codigo_socio):
-    socios = DBF(os.path.join(DBF_PATH, 'Socios.dbf'), load=True)
+    socios = load_dbf('Socios.dbf')
     for socio in socios:
-        if socio['CODIGO'] == codigo_socio:
+        if ids_match(socio['CODIGO'], codigo_socio):
             return {
+                'Codigo': socio['CODIGO'],
                 'Nombre': socio['NOMBRE'],
                 'Domicilio': socio['DOMICI'],
                 'Codigo Postal': socio['CODPOSTAL'],
@@ -137,8 +200,8 @@ def get_socio_by_codigo(codigo_socio):
 
 # Funcion para consultar saldos de cuentas
 def get_saldos_cuentas(cuenta_socio):
-    saldos = DBF(os.path.join(DBF_PATH, 'sdoca01.dbf'), load=True)
-    comprobantes = DBF(os.path.join(DBF_PATH, 'comprobantes.dbf'), load=True)
+    saldos = load_dbf('sdoca01.dbf')
+    comprobantes = load_dbf('comprobantes.dbf')
     # Crear un diccionario para buscar rápido el nombre de comprobantes por ID
     comprobantes_dict = {
         row['IDCOMPRO']: row['NOMBRE']
@@ -159,8 +222,8 @@ def get_saldos_cuentas(cuenta_socio):
 
 # Funcion para consultar movimientos del mes de las caja de ahorros
 def get_movimientos_cuentas(cuenta, tipo):
-    movimiento_ca = DBF(os.path.join(DBF_PATH, 'movca01.dbf'), load=True)
-    amvcpto = DBF(os.path.join(DBF_PATH, 'amvcpto.dbf'), load=True)
+    movimiento_ca = load_dbf('movca01.dbf')
+    amvcpto = load_dbf('amvcpto.dbf')
     # Crear un diccionario para buscar rápido el nombre por código
     amvcpto_dict = {
         row['CODIGO']: {
@@ -189,8 +252,8 @@ def get_movimientos_cuentas(cuenta, tipo):
 # Funcion para consultar movimientos de las caja de ahorros historicos
 import datetime
 def get_movimientos_cuentas_historicos(cuenta, tipo):
-    movimiento_ca = DBF(os.path.join(DBF_PATH, 'movca01.dbf'), load=True)
-    amvcpto = DBF(os.path.join(DBF_PATH, 'amvcpto.dbf'), load=True)
+    movimiento_ca = load_dbf('movca01.dbf')
+    amvcpto = load_dbf('amvcpto.dbf')
     amvcpto_dict = {row['CODIGO']: row['NOMBRE'] for row in amvcpto}
 
     # Calcular rango de fechas
@@ -272,7 +335,7 @@ def obtener_cuotas(ayuda: int):
         raise HTTPException(status_code=404, detail="No se encontraron préstamos")
 
 @app.get("/sociocodigo/{codigo_socio}")
-def socio_por_codigo(codigo_socio: int):
+def socio_por_codigo(codigo_socio: str):
     socio = get_socio_by_codigo(codigo_socio)
     if socio:
         return socio
