@@ -93,6 +93,7 @@ def get_socio_by_cuit(cuit):
                 'Sexo': socio.get('SEXO'),
                 'Domicilio': socio['DOMICI'],
                 'Codigo Postal': socio['CODPOSTAL'],
+                'Localidad': socio['LOCALI'],
                 'CUIT': socio['CUIT'],
                 'Tipo Documento': socio.get('TIPODOC'),
                 'Numero Documento': socio.get('NRODOC'),
@@ -187,6 +188,20 @@ def get_cuotas_by_ayuda(ayuda):
     ]
     return cuotas_ayuda
 
+# Funcion para consultar las cuotas sociales pendientes de un Socio por su codigo
+def get_cuotas_sociales_pendientes(codigo_socio):
+    cuotas = load_dbf('Ctasocio.dbf')
+    cuotas_pendientes = [
+        {
+            'Socio': cuota['SOCIO'],
+            'Fecha': cuota['FECHA'],
+            'Importe': cuota['IMPORT']
+        }
+        for cuota in cuotas
+        if ids_match(cuota['SOCIO'], codigo_socio) and not str(cuota.get('ESTADO') or '').strip()
+    ]
+    return cuotas_pendientes
+
 # Funcion para consultar datos del socio por el Codigo (lo uso en sistema WEB de Tarjetas)
 def get_socio_by_codigo(codigo_socio):
     socios = load_dbf('Socios.dbf')
@@ -198,6 +213,8 @@ def get_socio_by_codigo(codigo_socio):
                 'Sucursal': socio.get('SUCURSAL'),
                 'Sexo': socio.get('SEXO'),
                 'Domicilio': socio['DOMICI'],
+                'Codigo Postal': socio['CODPOSTAL'],
+                'Localidad': socio['LOCALI'],
                 'Codigo Postal': socio['CODPOSTAL'],
                 'CUIT': socio['CUIT'],
                 'Tipo Documento': socio.get('TIPODOC'),
@@ -218,6 +235,69 @@ def get_socio_by_codigo(codigo_socio):
                 'Codigo Actividad': socio['ACTIVIDAD']
             }
     return None
+
+# Funcion para consultar cheques o valores al cobro de un Socio
+def get_cheques_by_socio(cuenta_socio):
+    cheques = load_dbf('movac01.dbf')
+    comprobantes = load_dbf('comprobantes.dbf')
+    # Crear un diccionario para buscar rápido el nombre de comprobantes por ID
+    comprobantes_dict = {row['IDCOMPRO']: row['NOMBRE'] for row in comprobantes}
+    cheques_socio = [
+        {
+            'Cuenta': cheque['CUENTA'],
+            'Ayuda': cheque['AYUDA'],
+            'Fecha Deposito': cheque['FECDEP'],
+            'Fecha Acreditacion': cheque['FECACR'],
+            'Banco': cheque['BANCO'],
+            'Cheque': cheque['CHEQUE'],
+            'Localidad': cheque['LOCALI'],
+            'Horas': cheque['HORAS'],
+            'Importe': cheque['IMPORT'],
+            'Comision': cheque['COMISION'],
+            'Impuesto': cheque['IMPUESTO'],
+            'Devenga': cheque['DEVENGA'],
+            'Acreditado': cheque['ACREDI'],
+            'Gasto': cheque['GASTO'],
+            'Total': cheque['TOTAL'],
+            'Codigo Banco': cheque['CODBCO'],
+            'Sucursal': cheque['SUCURSAL'],
+            'Codigo Localidad': cheque['CODLOC'],
+            'Numero Cuenta': cheque['NROCTA'],
+            'CUIT': cheque['CUIT'],
+            'Serie': cheque['SERIE'],
+            'Tipo Ahorro': cheque['TIPOAHORRO'],
+            'Nombre_Tipo_Ahorro': comprobantes_dict.get(cheque['TIPOAHORRO'], '')
+        }
+        for cheque in cheques if ids_match(cheque['CUENTA'], cuenta_socio)
+    ]
+    return cheques_socio
+
+# Funcion para consultar los ahorros a termino (plazo fijo) de un Socio
+def get_ahorros_termino_by_socio(cuenta_socio):
+    ahorros = load_dbf('movpf01.dbf')
+    comprobantes = load_dbf('comprobantes.dbf')
+    # Crear un diccionario para buscar rápido el nombre de comprobantes por ID
+    comprobantes_dict = {row['IDCOMPRO']: row['NOMBRE'] for row in comprobantes}
+    ahorros_socio = [
+        {
+            'Comprobante': ahorro['COMPRO'],
+            'Nombre_Comprobante': comprobantes_dict.get(ahorro['COMPRO'], ''),
+            'Numero': ahorro['NUMERO'],
+            'Cuenta': ahorro['CUENTA'],
+            'Fecha': ahorro['FECHA'],
+            'Plazo': ahorro['PLAZO'],
+            'Vencimiento': ahorro['FECVTO'],
+            'TEM': ahorro['TEM'],
+            'TNA': ahorro['TNA'],
+            'Deposito': ahorro['DEPOSI'],
+            'Estimulo': ahorro['ESTIMU'],
+            'Sello': ahorro['SELLO'],
+            'Total': ahorro['TOTAL'],
+            'Moneda': ahorro['MONEDA']
+        }
+        for ahorro in ahorros if ids_match(ahorro['CUENTA'], cuenta_socio)
+    ]
+    return ahorros_socio
 
 # Funcion para consultar saldos de cuentas
 def get_saldos_cuentas(cuenta_socio):
@@ -362,6 +442,14 @@ def socio_por_codigo(codigo_socio: str):
         return socio
     else:
         raise HTTPException(status_code=404, detail="Socio no encontrado")
+
+@app.get("/cuotassociales/{codigo_socio}")
+def obtener_cuotas_sociales_pendientes(codigo_socio: int):
+    cuotas = get_cuotas_sociales_pendientes(codigo_socio)
+    if cuotas:
+        return cuotas
+    else:
+        raise HTTPException(status_code=404, detail="No se encontraron cuotas sociales pendientes")
     
 @app.get("/saldos/{cuenta}")
 def obtener_saldos(cuenta: int):
@@ -370,6 +458,22 @@ def obtener_saldos(cuenta: int):
         return saldos
     else:
         raise HTTPException(status_code=404, detail="No se encontraron cuentas para este socio")
+
+@app.get("/ahorrostermino/{cuenta}")
+def obtener_ahorros_termino(cuenta: int):
+    ahorros = get_ahorros_termino_by_socio(cuenta)
+    if ahorros:
+        return ahorros
+    else:
+        raise HTTPException(status_code=404, detail="No se encontraron ahorros a termino para este socio")
+
+@app.get("/cheques/{cuenta}")
+def obtener_cheques(cuenta: int):
+    cheques = get_cheques_by_socio(cuenta)
+    if cheques:
+        return cheques
+    else:
+        raise HTTPException(status_code=404, detail="No se encontraron cheques o valores al cobro para este socio")
 
 @app.get("/resumen_cuenta/{cuenta}/{tipo}")
 def obtener_resumen_cuenta_mes(cuenta: int, tipo: str):
