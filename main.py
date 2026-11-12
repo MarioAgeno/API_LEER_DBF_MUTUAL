@@ -103,77 +103,77 @@ def get_socio_sg_data(codigo):
 def get_tipo_persona_id_sg(tipopers):
     """Obtiene id_sg de UIFPersona relacionado con socios.tipopers"""
     try:
-        uif_persona = load_dbf('UIFPersona.dbf')
+        uif_persona = load_dbf('UIFPERSONA.dbf')
         for registro in uif_persona:
-            if ids_match(registro.get('id'), tipopers):
-                return registro.get('id_sg')
+            if ids_match(registro.get('ID'), tipopers):
+                return registro.get('ID_SG')
     except Exception:
         pass
     return None
 
 
 def get_actividad_id_sg(codigo_actividad):
-    """Obtiene id_sg de la tabla Actividad relacionado con socios.actividad"""
+    """Obtiene id_sg de la tabla ACTIVIDA relacionado con socios.actividad"""
     try:
-        actividades = load_dbf('Actividad.dbf')
+        actividades = load_dbf('ACTIVIDA.dbf')
         for registro in actividades:
             if ids_match(registro.get('CODIGO'), codigo_actividad):
-                return registro.get('id_sg')
+                return registro.get('ID_SG')
     except Exception:
         pass
     return None
 
 
 def get_estado_civil_id_sg(id_estcivil):
-    """Obtiene id_sg de EstCivil relacionado con socios.estcivil"""
+    """Obtiene id_sg de ESTCIVIL relacionado con socios.estcivil"""
     try:
-        estcivil = load_dbf('EstCivil.dbf')
+        estcivil = load_dbf('ESTCIVIL.dbf')
         for registro in estcivil:
-            if ids_match(registro.get('id'), id_estcivil):
-                return registro.get('id_sg')
+            if ids_match(registro.get('CODIGO'), id_estcivil):
+                return registro.get('ID_SG')
     except Exception:
         pass
     return None
 
 
 def get_provincia_id_sg(codpostal):
-    """Obtiene id_sg de Provincias relacionado mediante horasacr y socios.codpostal"""
+    """Obtiene id_sg de PROVINCIAS relacionado mediante HORASACR y socios.codpostal"""
     try:
-        horasacr = load_dbf('horasacr.dbf')
-        provincias = load_dbf('provincias.dbf')
+        horasacr = load_dbf('HORASACR.dbf')
+        provincias = load_dbf('PROVINCIAS.dbf')
         
         # Primero buscar el codigo en horasacr que coincida con codpostal
         for reg_horasacr in horasacr:
             if ids_match(reg_horasacr.get('CODIGO'), codpostal):
-                inaescd = reg_horasacr.get('inaescd')
+                inaescd = reg_horasacr.get('INAESCD')
                 # Luego buscar en provincias donde provincia = inaescd
                 for reg_provincia in provincias:
-                    if ids_match(reg_provincia.get('provincia'), inaescd):
-                        return reg_provincia.get('id_sg')
+                    if ids_match(reg_provincia.get('PROVINCIA'), inaescd):
+                        return reg_provincia.get('ID_SG')
     except Exception:
         pass
     return None
 
 
 def get_pais_id_sg(codigo_pais):
-    """Obtiene id_sg de Paises relacionado con socios.pais"""
+    """Obtiene id_sg de PAISES relacionado con socios.pais"""
     try:
-        paises = load_dbf('Paises.dbf')
+        paises = load_dbf('PAISES.dbf')
         for registro in paises:
             if ids_match(registro.get('CODIGO'), codigo_pais):
-                return registro.get('id_sg')
+                return registro.get('ID_SG')
     except Exception:
         pass
     return None
 
 
 def get_situacion_iva_id_sg(codigo_iva):
-    """Obtiene id_sg de CodIva relacionado con socios.sitiva"""
+    """Obtiene id_sg de CODIVA relacionado con socios.sitiva"""
     try:
-        codiva = load_dbf('CodIva.dbf')
+        codiva = load_dbf('CODIVA.dbf')
         for registro in codiva:
             if ids_match(registro.get('CODIGO'), codigo_iva):
-                return registro.get('id_sg')
+                return registro.get('ID_SG')
     except Exception:
         pass
     return None
