@@ -81,11 +81,110 @@ def ids_match(db_value, query_value):
     return normalize_id(db_value) == normalize_id(query_value)
 
 
+# Funcion para obtener datos de AgilPagos desde sociosSG
+def get_socio_sg_data(codigo):
+    try:
+        sociosSG = load_dbf('sociosSG.dbf')
+        for registro in sociosSG:
+            if ids_match(registro.get('CODIGO'), codigo):
+                return {
+                    'id_sg': registro.get('id_sg'),
+                    'id_user': registro.get('id_user'),
+                    'cuentamutu': registro.get('cuentamutu'),
+                    'alta': registro.get('alta')
+                }
+    except Exception:
+        pass
+    return None
+
+
+# Funciones auxiliares para obtener id_sg de tablas relacionadas
+
+def get_tipo_persona_id_sg(tipopers):
+    """Obtiene id_sg de UIFPersona relacionado con socios.tipopers"""
+    try:
+        uif_persona = load_dbf('UIFPersona.dbf')
+        for registro in uif_persona:
+            if ids_match(registro.get('id'), tipopers):
+                return registro.get('id_sg')
+    except Exception:
+        pass
+    return None
+
+
+def get_actividad_id_sg(codigo_actividad):
+    """Obtiene id_sg de la tabla Actividad relacionado con socios.actividad"""
+    try:
+        actividades = load_dbf('Actividad.dbf')
+        for registro in actividades:
+            if ids_match(registro.get('CODIGO'), codigo_actividad):
+                return registro.get('id_sg')
+    except Exception:
+        pass
+    return None
+
+
+def get_estado_civil_id_sg(id_estcivil):
+    """Obtiene id_sg de EstCivil relacionado con socios.estcivil"""
+    try:
+        estcivil = load_dbf('EstCivil.dbf')
+        for registro in estcivil:
+            if ids_match(registro.get('id'), id_estcivil):
+                return registro.get('id_sg')
+    except Exception:
+        pass
+    return None
+
+
+def get_provincia_id_sg(codpostal):
+    """Obtiene id_sg de Provincias relacionado mediante horasacr y socios.codpostal"""
+    try:
+        horasacr = load_dbf('horasacr.dbf')
+        provincias = load_dbf('provincias.dbf')
+        
+        # Primero buscar el codigo en horasacr que coincida con codpostal
+        for reg_horasacr in horasacr:
+            if ids_match(reg_horasacr.get('CODIGO'), codpostal):
+                inaescd = reg_horasacr.get('inaescd')
+                # Luego buscar en provincias donde provincia = inaescd
+                for reg_provincia in provincias:
+                    if ids_match(reg_provincia.get('provincia'), inaescd):
+                        return reg_provincia.get('id_sg')
+    except Exception:
+        pass
+    return None
+
+
+def get_pais_id_sg(codigo_pais):
+    """Obtiene id_sg de Paises relacionado con socios.pais"""
+    try:
+        paises = load_dbf('Paises.dbf')
+        for registro in paises:
+            if ids_match(registro.get('CODIGO'), codigo_pais):
+                return registro.get('id_sg')
+    except Exception:
+        pass
+    return None
+
+
+def get_situacion_iva_id_sg(codigo_iva):
+    """Obtiene id_sg de CodIva relacionado con socios.sitiva"""
+    try:
+        codiva = load_dbf('CodIva.dbf')
+        for registro in codiva:
+            if ids_match(registro.get('CODIGO'), codigo_iva):
+                return registro.get('id_sg')
+    except Exception:
+        pass
+    return None
+
+
 # Funcion para consultar un Socio por su CUIT
 def get_socio_by_cuit(cuit):
     socios = load_dbf('Socios.dbf')
     for socio in socios:
         if ids_match(socio['CUIT'], cuit):
+            socio_sg = get_socio_sg_data(socio['CODIGO'])
             return {
                 'Codigo': socio['CODIGO'],
                 'Nombre': socio['NOMBRE'],
@@ -97,6 +196,7 @@ def get_socio_by_cuit(cuit):
                 'CUIT': socio['CUIT'],
                 'Tipo Documento': socio.get('TIPODOC'),
                 'Numero Documento': socio.get('NRODOC'),
+                'Tramite DNI': socio.get('TRAMITEDNI'),
                 'Estado Civil': socio.get('ESTCIVIL'),
                 'Condicion Fiscal': socio.get('SITIVA'),
                 'Sujeto Obligado UIF': socio.get('SUJOBLIG'),
@@ -110,7 +210,16 @@ def get_socio_by_cuit(cuit):
                 'Telefono 2': socio['FAX'],
                 'Movil': socio['CELULAR'],
                 'e-Mail': socio['MAIL'],
-                'Codigo Actividad': socio['ACTIVIDAD']
+                'Codigo Actividad': socio['ACTIVIDAD'],
+                'AgilPagos': socio_sg if socio_sg else {},
+                'Datos_Integracion_AgilPagos': {
+                    'tipo_persona_id_sg': get_tipo_persona_id_sg(socio.get('TIPOPERS')),
+                    'actividad_id_sg': get_actividad_id_sg(socio.get('ACTIVIDAD')),
+                    'estado_civil_id_sg': get_estado_civil_id_sg(socio.get('ESTCIVIL')),
+                    'provincia_id_sg': get_provincia_id_sg(socio.get('CODPOSTAL')),
+                    'pais_id_sg': get_pais_id_sg(socio.get('PAIS')),
+                    'situacion_iva_id_sg': get_situacion_iva_id_sg(socio.get('SITIVA'))
+                }
             }
     return None
 
@@ -207,6 +316,7 @@ def get_socio_by_codigo(codigo_socio):
     socios = load_dbf('Socios.dbf')
     for socio in socios:
         if ids_match(socio['CODIGO'], codigo_socio):
+            socio_sg = get_socio_sg_data(socio['CODIGO'])
             return {
                 'Codigo': socio['CODIGO'],
                 'Nombre': socio['NOMBRE'],
@@ -215,10 +325,10 @@ def get_socio_by_codigo(codigo_socio):
                 'Domicilio': socio['DOMICI'],
                 'Codigo Postal': socio['CODPOSTAL'],
                 'Localidad': socio['LOCALI'],
-                'Codigo Postal': socio['CODPOSTAL'],
                 'CUIT': socio['CUIT'],
                 'Tipo Documento': socio.get('TIPODOC'),
                 'Numero Documento': socio.get('NRODOC'),
+                'Tramite DNI': socio.get('TRAMITEDNI'),
                 'Estado Civil': socio.get('ESTCIVIL'),
                 'Condicion Fiscal': socio.get('SITIVA'),
                 'Sujeto Obligado UIF': socio.get('SUJOBLIG'),
@@ -232,7 +342,16 @@ def get_socio_by_codigo(codigo_socio):
                 'Telefono 2': socio['FAX'],
                 'Movil': socio['CELULAR'],
                 'e-Mail': socio['MAIL'],
-                'Codigo Actividad': socio['ACTIVIDAD']
+                'Codigo Actividad': socio['ACTIVIDAD'],
+                'AgilPagos': socio_sg if socio_sg else {},
+                'Datos_Integracion_AgilPagos': {
+                    'tipo_persona_id_sg': get_tipo_persona_id_sg(socio.get('TIPOPERS')),
+                    'actividad_id_sg': get_actividad_id_sg(socio.get('ACTIVIDAD')),
+                    'estado_civil_id_sg': get_estado_civil_id_sg(socio.get('ESTCIVIL')),
+                    'provincia_id_sg': get_provincia_id_sg(socio.get('CODPOSTAL')),
+                    'pais_id_sg': get_pais_id_sg(socio.get('PAIS')),
+                    'situacion_iva_id_sg': get_situacion_iva_id_sg(socio.get('SITIVA'))
+                }
             }
     return None
 
